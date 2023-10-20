@@ -12,6 +12,19 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": [
+      {
+        "type": "object",
+        "title": "vscode-image-import",
+        "properties": {
+          "vscode-image-import.imagePath": {
+            "type": "string",
+            "default": "",
+            "description": "最愛の猫画像が含まれているフォルダを指定してください。（未指定の場合は内部保存画像を利用します）"
+          }
+        }
+      }
+    ],
     "views": {
 			"explorer": [
 				{
@@ -31,10 +44,6 @@
       ]
     },
     "commands": [
-      {
-        "command": "vscode-image-import.setImagePath",
-        "title": "MyLoveCat: Set Image Path"
-      },
       {
         "command": "vscode-image-import.viewExplorerMyLoveCat",
         "title": "MyLoveCat: Explorer View "

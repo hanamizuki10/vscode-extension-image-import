@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
   //==========================================================================
@@ -33,15 +35,62 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 }
+function getFileList(directoryPath: string): string[] {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif'];
+  try {
+    // ファイル一覧を取得
+    const files = fs.readdirSync(directoryPath).filter(file => {
+      const ext = path.extname(file).toLowerCase(); // ファイルの拡張子を取得
+      return imageExtensions.includes(ext); // 画像の拡張子に一致するものだけを返す
+    });
+    
+    // ファイルの絶対パスに変換します。
+    return files;
+  } catch (error) {
+    console.error('Error reading directory:', error);
+    return [];
+  }
+}
 
-function _getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri) {
+/**
+ * HTMLを生成する
+ * @param webview 
+ * @param extensionUri 
+ * @returns 
+ */
+function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri) {
   // ランダムに表示する画像を選択
-  const images = ["MyLoveCat01.jpg","MyLoveCat02.jpg","MyLoveCat03.jpg"];
-  let filename = images[Math.floor(Math.random() * images.length)];
+  const configImagePath: string | undefined= vscode.workspace.getConfiguration('vscode-image-import').get('imagePath');
+  let imagePath;
+  let filename;
+  let catImageUri;
+  if (configImagePath) {
+    console.log('configImagePath', JSON.stringify(configImagePath));
+    imagePath = configImagePath;
+    const files = getFileList(configImagePath);
+    if (files.length > 0) {
+      console.log('files', files.join(', '));
+      filename = files[Math.floor(Math.random() * files.length)];
+      catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(vscode.Uri.file(configImagePath),filename));
+    }
+  } else {
+    // デフォルトの画像を表示
+    console.log('configImagePath is not set');
+    imagePath = 'media';
+    const images = ["MyLoveCat01.jpg","MyLoveCat02.jpg","MyLoveCat03.jpg"];
+    filename = images[Math.floor(Math.random() * images.length)];
+    console.log('joinPath', vscode.Uri.joinPath(extensionUri, imagePath, filename));
+    catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, imagePath, filename));
+  }
+  console.log('imagePath', imagePath);
+  console.log('filename', filename);
   // ファイルパスを生成 
-  const catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', filename));
+  if (!catImageUri) {
+    return '画像が存在しません。設定[vscode-image-import]-[Image Path]を見直してください。';
+  }
   // ファイルパスのURIを生成
-  const catGifSrc = webview.asWebviewUri(catImageUri);
+  const catSrc = webview.asWebviewUri(catImageUri);
+  console.log('catSrc', catSrc);
   return  `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,7 +100,7 @@ function _getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri) {
 </head>
 <body>
 <p>${filename}</p>
-<img src="${catGifSrc}"></img>
+<img src="${catSrc}"></img>
 </body>
 </html>`;
 }
@@ -135,7 +184,7 @@ class MyLoveCatViewPanel {
   // 画像をランダムで表示する
   private _update() {
 		const webview = this._panel.webview;
-		this._panel.webview.html = _getHtmlForWebview(webview, this._extensionUri);
+		this._panel.webview.html = getHtmlForWebview(webview, this._extensionUri);
   }
 }
 
@@ -173,7 +222,7 @@ class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
   private _update() {
     if (this._view) {
       const webview = this._view.webview;
-      this._view.webview.html = _getHtmlForWebview(webview, this._extensionUri);
+      this._view.webview.html = getHtmlForWebview(webview, this._extensionUri);
     }
   }
 }
