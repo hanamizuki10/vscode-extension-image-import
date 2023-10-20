@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
   //==========================================================================
-  // まずシンプルにエディタに表示 - start
+  // エディタに表示
   //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewPanelMyLoveCat', () => {
@@ -10,10 +10,7 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   //==========================================================================
-  // まずシンプルにエディタに表示 - end
-  //==========================================================================
-  //==========================================================================
-  // explorer に表示 - start
+  // explorer に表示
   //==========================================================================
   context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(MyLoveCatViewProvider.viewType, new MyLoveCatViewProvider(context.extensionUri))
@@ -26,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   //==========================================================================
-  // explorer に表示 - end
+  // ランダムで表示
   //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewMyLoveCatRandom', () => {
@@ -37,6 +34,9 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
+/**
+ * エディタに表示するためのクラス
+ */
 class MyLoveCatViewPanel {
 	public static currentPanel: MyLoveCatViewPanel | undefined;
   private readonly _panel: vscode.WebviewPanel;
@@ -64,8 +64,6 @@ class MyLoveCatViewPanel {
 			MyLoveCatViewPanel.currentPanel._panel.reveal(column);
 			return;
 		}
-
-    console.log(column);
     const webviewType = 'viewTypePanel';
     const webviewTitle = 'My Love Cat';
     // TODO:何ができるのか後で確認する
@@ -81,6 +79,7 @@ class MyLoveCatViewPanel {
     );
 		MyLoveCatViewPanel.currentPanel = new MyLoveCatViewPanel(panel, extensionUri);
   }
+  // コンストラクタ
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
     this._panel = panel;
 		this._extensionUri = extensionUri;
@@ -111,6 +110,7 @@ class MyLoveCatViewPanel {
 			}
 		}
 	}
+  // 画像をランダムで表示する
   private _update() {
     const images = ["MyLoveCat01.jpg","MyLoveCat02.jpg","MyLoveCat03.jpg"];
     let viewFileName = images[Math.floor(Math.random() * images.length)];
@@ -137,6 +137,9 @@ class MyLoveCatViewPanel {
   }
 }
 
+/**
+ * エクスプローラーに表示するためのクラス
+ */
 class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
 	public static currentProvider: MyLoveCatViewProvider | undefined;
   public static readonly viewType = 'viewExplorerMyLoveCat';
