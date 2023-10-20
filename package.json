@@ -32,16 +32,20 @@
     },
     "commands": [
       {
+        "command": "vscode-image-import.setImagePath",
+        "title": "MyLoveCat: Set Image Path"
+      },
+      {
         "command": "vscode-image-import.viewExplorerMyLoveCat",
-        "title": "Explorer View My Love Cat "
+        "title": "MyLoveCat: Explorer View "
       },
       {
         "command": "vscode-image-import.viewPanelMyLoveCat",
-        "title": "Panel View My Love Cat"
+        "title": "MyLoveCat: Panel View"
       },
       {
         "command": "vscode-image-import.viewMyLoveCatRandom",
-        "title": "View My Love Cat Random Update",
+        "title": "MyLoveCat: Image Random Update",
         "icon": {
           "dark": "media/icon/dark-reload.svg",
           "light": "media/icon/light-reload.svg"
