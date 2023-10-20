@@ -34,6 +34,28 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
+function _getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri) {
+  // ランダムに表示する画像を選択
+  const images = ["MyLoveCat01.jpg","MyLoveCat02.jpg","MyLoveCat03.jpg"];
+  let filename = images[Math.floor(Math.random() * images.length)];
+  // ファイルパスを生成 
+  const catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', filename));
+  // ファイルパスのURIを生成
+  const catGifSrc = webview.asWebviewUri(catImageUri);
+  return  `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Love Cat</title>
+</head>
+<body>
+<p>${filename}</p>
+<img src="${catGifSrc}"></img>
+</body>
+</html>`;
+}
+
 /**
  * エディタに表示するためのクラス
  */
@@ -112,28 +134,8 @@ class MyLoveCatViewPanel {
 	}
   // 画像をランダムで表示する
   private _update() {
-    const images = ["MyLoveCat01.jpg","MyLoveCat02.jpg","MyLoveCat03.jpg"];
-    let viewFileName = images[Math.floor(Math.random() * images.length)];
 		const webview = this._panel.webview;
-		this._panel.webview.html = this._getHtmlForWebview(webview, viewFileName);
-  }
-	private _getHtmlForWebview(webview: vscode.Webview, filename: string) {
-    /** ファイルパスを生成 */
-    const catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', filename));
-    /** ファイルパスのURIを生成 */
-    const catGifSrc = webview.asWebviewUri(catImageUri);
-    return  `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Love Cat</title>
-</head>
-<body>
-  <p>${filename}</p>
-  <img src="${catGifSrc}"></img>
-</body>
-</html>`;
+		this._panel.webview.html = _getHtmlForWebview(webview, this._extensionUri);
   }
 }
 
@@ -170,29 +172,8 @@ class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
 
   private _update() {
     if (this._view) {
-      const images = ["MyLoveCat01.jpg","MyLoveCat02.jpg","MyLoveCat03.jpg"];
-      let viewFileName = images[Math.floor(Math.random() * images.length)];
       const webview = this._view.webview;
-      this._view.webview.html = this._getHtmlForWebview(webview, viewFileName);
+      this._view.webview.html = _getHtmlForWebview(webview, this._extensionUri);
     }
-  }
-
-	private _getHtmlForWebview(webview: vscode.Webview, filename: string) {
-    /** ファイルパスを生成 */
-    const catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', filename));
-    /** ファイルパスのURIを生成 */
-    const catGifSrc = webview.asWebviewUri(catImageUri);
-    return  `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Love Cat</title>
-</head>
-<body>
-  <p>${filename}</p>
-  <img src="${catGifSrc}"></img>
-</body>
-</html>`;
   }
 }
