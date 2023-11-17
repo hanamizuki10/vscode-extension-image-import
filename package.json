@@ -21,6 +21,11 @@
             "type": "string",
             "default": "",
             "description": "最愛の猫画像が含まれているフォルダを指定してください。（未指定の場合は内部保存画像を利用します）"
+          },
+          "vscode-image-import.intervalSeconds": {
+            "type": "number",
+            "default": 10,
+            "description": "ランダム表示の更新間隔（秒）"
           }
         }
       }

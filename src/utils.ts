@@ -44,9 +44,8 @@ function getNonce() {
  * @param extensionUri 
  * @returns 
  */
-export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri, configImagePath: string | undefined): string {
   // ランダムに表示する画像を選択
-  const configImagePath: string | undefined= vscode.workspace.getConfiguration('vscode-image-import').get('imagePath');
   let imagePath;
   let filename;
   let catImageUri;
@@ -113,8 +112,8 @@ export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.
  */
 export function getWebviewOptions(
   extensionUri: vscode.Uri,
+  configImagePath: string | undefined
 ): vscode.WebviewOptions & vscode.WebviewPanelOptions {
-  const configImagePath: string | undefined = vscode.workspace.getConfiguration('vscode-image-import').get('imagePath');
   const webviewOptions: vscode.WebviewOptions = {
     // Webview で JavaScript を有効にする
     enableScripts: true,
