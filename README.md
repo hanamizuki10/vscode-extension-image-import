@@ -1,4 +1,5 @@
 # vscode-image-import README
+基本的に10秒おきに指定フォルダ内の画像ファイルがが差し変わります。
 
 ## 開発の流れ
 - ターミナル: `npm install`
