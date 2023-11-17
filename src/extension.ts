@@ -20,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
   // explorer に表示
   //==========================================================================
   context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider(
+    vscode.window.registerWebviewViewProvider(
       MyLoveCatViewProvider.viewType,
       new MyLoveCatViewProvider(context.extensionUri, configImagePath))
   );

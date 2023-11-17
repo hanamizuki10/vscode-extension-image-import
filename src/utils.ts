@@ -119,7 +119,7 @@ export function getWebviewOptions(
     enableScripts: true,
     // ローカルリソースの画像を読み込むため必要なアクセス制御を追加
     localResourceRoots: (configImagePath) ?
-     [vscode.Uri.joinPath(extensionUri, 'media'), vscode.Uri.file(configImagePath)] : [vscode.Uri.joinPath(extensionUri, 'media')]
+    [vscode.Uri.joinPath(extensionUri, 'media'), vscode.Uri.file(configImagePath)] : [vscode.Uri.joinPath(extensionUri, 'media')]
   };
   return webviewOptions;
 }
