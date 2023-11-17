@@ -53,6 +53,20 @@ function getFileList(directoryPath: string): string[] {
 }
 
 /**
+ * ランダムな文字列を生成する
+ * @returns 
+ */
+function getNonce() {
+  let text = '';
+  const possible =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}
+
+/**
  * HTMLを生成する
  * @param webview 
  * @param extensionUri 
@@ -71,6 +85,7 @@ function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri) {
     if (files.length > 0) {
       console.log('files', files.join(', '));
       filename = files[Math.floor(Math.random() * files.length)];
+      console.log('joinPath', vscode.Uri.joinPath(vscode.Uri.file(configImagePath),filename));
       catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(vscode.Uri.file(configImagePath),filename));
     }
   } else {
@@ -89,12 +104,25 @@ function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri) {
     return '画像が存在しません。設定[vscode-image-import]-[Image Path]を見直してください。';
   }
   // ファイルパスのURIを生成
+  console.log('catImageUri', catImageUri);
   const catSrc = webview.asWebviewUri(catImageUri);
+  const nonce = getNonce();
   console.log('catSrc', catSrc);
+  console.log('webview.cspSource', webview.cspSource);
+  
   return  `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!--
+コンテンツセキュリティポリシーを使用して、httpsまたは拡張ディレクトリからの画像の読み込みのみを許可し、
+特定の nonce を持つスクリプトのみを許可します。
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none';
+  style-src ${webview.cspSource} 'nonce-${nonce}';
+  img-src ${webview.cspSource} https:;
+  script-src 'nonce-${nonce}';
+  font-src ${webview.cspSource};">
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>My Love Cat</title>
 </head>
@@ -137,10 +165,13 @@ class MyLoveCatViewPanel {
 		}
     const webviewType = 'viewTypePanel';
     const webviewTitle = 'My Love Cat';
-    // TODO:何ができるのか後で確認する
+    const configImagePath: string | undefined = vscode.workspace.getConfiguration('vscode-image-import').get('imagePath');
     const webviewOptions:vscode.WebviewOptions = {
       // Webview で JavaScript を有効にする
       enableScripts: true,
+      // ローカルリソースの画像を読み込むため必要なアクセス制御を追加
+      localResourceRoots: (configImagePath) ?
+       [vscode.Uri.joinPath(extensionUri, 'media'), vscode.Uri.file(configImagePath)] : [vscode.Uri.joinPath(extensionUri, 'media')]
     };
     const panel = vscode.window.createWebviewPanel(
       webviewType,
@@ -193,10 +224,10 @@ class MyLoveCatViewPanel {
  */
 class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
 	public static currentProvider: MyLoveCatViewProvider | undefined;
-  public static readonly viewType = 'viewExplorerMyLoveCat';
+	public static readonly viewType = 'viewExplorerMyLoveCat';
 	private _view?: vscode.WebviewView;
-  public static randomUpdate() {
-    if (MyLoveCatViewProvider.currentProvider) {
+	public static randomUpdate() {
+		if (MyLoveCatViewProvider.currentProvider) {
 			MyLoveCatViewProvider.currentProvider._update();
 			return;
 		}
@@ -213,8 +244,13 @@ class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
 		_token: vscode.CancellationToken,
 	) {
 		this._view = webviewView;
+    const configImagePath: string | undefined = vscode.workspace.getConfiguration('vscode-image-import').get('imagePath');
 		webviewView.webview.options = {
-			enableScripts: true
+      // Webview で JavaScript を有効にする
+			enableScripts: true,
+      // ローカルリソースの画像を読み込むため必要なアクセス制御を追加
+      localResourceRoots: (configImagePath) ?
+      [vscode.Uri.joinPath(this._extensionUri, 'media'), vscode.Uri.file(configImagePath)]: [vscode.Uri.joinPath(this._extensionUri, 'media')]
 		};
     this._update();
 	}
