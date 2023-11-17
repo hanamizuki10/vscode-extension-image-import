@@ -7,7 +7,7 @@ export function activate(context: vscode.ExtensionContext) {
   // 設定値取得
   //==========================================================================
   let intervalSeconds = vscode.workspace.getConfiguration().get('vscode-image-import.intervalSeconds', 10);
-  let configImagePath: string | undefined = vscode.workspace.getConfiguration('vscode-image-import').get('imagePath');
+  let configImagePath: string | undefined = vscode.workspace.getConfiguration().get('vscode-image-import.imagePath');
   //==========================================================================
   // エディタに表示
   //==========================================================================
