@@ -9,21 +9,16 @@ export function activate(context: vscode.ExtensionContext) {
   let intervalSeconds = vscode.workspace.getConfiguration().get('vscode-image-import.intervalSeconds', 10);
   let configImagePath: string | undefined = vscode.workspace.getConfiguration().get('vscode-image-import.imagePath');
   //==========================================================================
-  // エディタに表示
-  //==========================================================================
-  context.subscriptions.push(
-    vscode.commands.registerCommand('vscode-image-import.viewPanelMyLoveCat', () => {
-      MyLoveCatViewPanel.createOrShow(context.extensionUri, configImagePath);
-    })
-  );
-  //==========================================================================
   // explorer に表示
   //==========================================================================
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      MyLoveCatViewProvider.viewType,
+      'viewExplorerMyLoveCat',
       new MyLoveCatViewProvider(context.extensionUri, configImagePath))
   );
+  //==========================================================================
+  // コマンド実行時: explorer の表示が隠れていた場合は展開して表示
+  //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewExplorerMyLoveCat', () => {
       // すでにエクスプローラーには情報を表示しているけど、フォーカスを当てる感じ
@@ -31,9 +26,16 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.commands.executeCommand('viewExplorerMyLoveCat.focus');
     })
   );
-
   //==========================================================================
-  // コマンド指定で画像をランダムに差し替え
+  // コマンド実行時: エディタに表示
+  //==========================================================================
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vscode-image-import.viewPanelMyLoveCat', () => {
+      MyLoveCatViewPanel.createOrShow(context.extensionUri, configImagePath);
+    })
+  );
+  //==========================================================================
+  // コマンド実行時: 画像をランダムに差し替え
   //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewMyLoveCatRandom', () => {

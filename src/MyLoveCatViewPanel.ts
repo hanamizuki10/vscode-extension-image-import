@@ -9,51 +9,24 @@ export class MyLoveCatViewPanel {
   public configImagePath: string | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
-  public static readonly viewType = 'viewTypePanel';
   private _disposables: vscode.Disposable[] = [];
 
-  public static randomUpdate() {
-    if (MyLoveCatViewPanel.currentPanel) {
-      MyLoveCatViewPanel.currentPanel._update();
-      return;
-    }
-  }
-
   public static createOrShow(extensionUri: vscode.Uri, configImagePath: string | undefined) {
-    // TODO:この引数の意味をしっかりと後で確認する
-    const column = vscode.window.activeTextEditor
-    ? vscode.window.activeTextEditor.viewColumn
-    : undefined;
-    // すでにパネルがある場合はそれを見せる
+    // すでにパネル表示している場合は、フォーカスを当て再表示させる
     if (MyLoveCatViewPanel.currentPanel) {
-      MyLoveCatViewPanel.currentPanel._panel.reveal(column);
+      MyLoveCatViewPanel.currentPanel._panel.reveal(undefined);
       return;
     }
-    // パネルを作成
-    const webviewType = 'viewTypePanel';
-    const webviewTitle = 'My Love Cat';
+
+    // パネル作成
     const webviewOptions:vscode.WebviewOptions = getWebviewOptions(extensionUri, configImagePath);
     const panel = vscode.window.createWebviewPanel(
-      webviewType,
-      webviewTitle,
-      column || vscode.ViewColumn.One,
-      webviewOptions,
+      'viewPanelMyLoveCat', // パネル識別子
+      'My Love Cat', // パネルタイトル
+      vscode.ViewColumn.One, // パネル表示位置
+      webviewOptions, // Webviewオプション
     );
     MyLoveCatViewPanel.currentPanel = new MyLoveCatViewPanel(panel, extensionUri, configImagePath);
-  }
-
-  /**
-   * 画像フォルダパスを更新する
-   * @param extensionUri 
-   * @param configImagePath 
-   */
-  public static updateConfigImagePath(configImagePath: string | undefined) {
-    if (MyLoveCatViewPanel.currentPanel) {
-      // 画像フォルダパスを更新
-      const webviewOptions:vscode.WebviewOptions = getWebviewOptions(MyLoveCatViewPanel.currentPanel._extensionUri, configImagePath);
-      MyLoveCatViewPanel.currentPanel._panel.webview.options = webviewOptions;
-      MyLoveCatViewPanel.currentPanel.configImagePath = configImagePath;
-    }
   }
 
   // コンストラクタ
@@ -66,25 +39,14 @@ export class MyLoveCatViewPanel {
     this._panel = panel;
     this._extensionUri = extensionUri;
     this._update();
+    // パネルが破棄された時のリソース解放処理を登録
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-    // Update the content based on view changes
-    this._panel.onDidChangeViewState(
-      e => {
-        if (this._panel.visible) {
-          this._update();
-        }
-      },
-      null,
-      this._disposables
-    );
   }
+
+  // パネルを閉じた時に呼び出される (クリーンアップ処理追加)
   public dispose() {
     MyLoveCatViewPanel.currentPanel = undefined;
-
-    // Clean up our resources
     this._panel.dispose();
-
     while (this._disposables.length) {
       const x = this._disposables.pop();
       if (x) {
@@ -92,9 +54,28 @@ export class MyLoveCatViewPanel {
       }
     }
   }
-  // 画像をランダムで表示する
+
+  // 表示内容を更新する
   private _update() {
     const webview = this._panel.webview;
     this._panel.webview.html = getHtmlForWebview(webview, this._extensionUri, this.configImagePath);
+  }
+
+  // 設定画面から画像フォルダパスを更新された場合に呼び出される
+  public static updateConfigImagePath(configImagePath: string | undefined) {
+    if (MyLoveCatViewPanel.currentPanel) {
+      // 画像フォルダパスを更新
+      const webviewOptions:vscode.WebviewOptions = getWebviewOptions(MyLoveCatViewPanel.currentPanel._extensionUri, configImagePath);
+      MyLoveCatViewPanel.currentPanel._panel.webview.options = webviewOptions;
+      MyLoveCatViewPanel.currentPanel.configImagePath = configImagePath;
+    }
+  }
+
+  // コマンドから「ランダム表示」を実行された場合に呼び出される
+  public static randomUpdate() {
+    if (MyLoveCatViewPanel.currentPanel) {
+      MyLoveCatViewPanel.currentPanel._update();
+      return;
+    }
   }
 }

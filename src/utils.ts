@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 /**
- * ファイル一覧を取得する関数
+ * ファイル一覧を取得する
  * @param directoryPath 
  * @returns 
  */
@@ -25,7 +25,7 @@ function getFileList(directoryPath: string): string[] {
 }
 
 /**
- * ランダムな文字列を生成する
+ * コンテンツセキュリティポリシーnonce用: ランダムな文字列を生成する
  * @returns 
  */
 function getNonce() {
@@ -39,7 +39,7 @@ function getNonce() {
 }
 
 /**
- * HTMLを生成する関数
+ * HTMLを生成する
  * @param webview 
  * @param extensionUri 
  * @returns 
@@ -50,36 +50,36 @@ export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.
   let filename;
   let catImageUri;
   if (configImagePath) {
-    console.log('configImagePath', JSON.stringify(configImagePath));
+    // console.log('configImagePath', JSON.stringify(configImagePath));
     imagePath = configImagePath;
     const files = getFileList(configImagePath);
     if (files.length > 0) {
-      console.log('files', files.join(', '));
+      //console.log('files', files.join(', '));
       filename = files[Math.floor(Math.random() * files.length)];
-      console.log('joinPath', vscode.Uri.joinPath(vscode.Uri.file(configImagePath),filename));
+      //console.log('joinPath', vscode.Uri.joinPath(vscode.Uri.file(configImagePath),filename));
       catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(vscode.Uri.file(configImagePath),filename));
     }
   } else {
     // デフォルトの画像を表示
-    console.log('configImagePath is not set');
+    //console.log('configImagePath is not set');
     imagePath = 'media';
     const images = ["MyLoveCat01.jpg","MyLoveCat02.jpg","MyLoveCat03.jpg"];
     filename = images[Math.floor(Math.random() * images.length)];
-    console.log('joinPath', vscode.Uri.joinPath(extensionUri, imagePath, filename));
+    //console.log('joinPath', vscode.Uri.joinPath(extensionUri, imagePath, filename));
     catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, imagePath, filename));
   }
-  console.log('imagePath', imagePath);
-  console.log('filename', filename);
+  //console.log('imagePath', imagePath);
+  //console.log('filename', filename);
   // ファイルパスを生成 
   if (!catImageUri) {
     return '画像が存在しません。設定[vscode-image-import]-[Image Path]を見直してください。';
   }
   // ファイルパスのURIを生成
-  console.log('catImageUri', catImageUri);
+  //console.log('catImageUri', catImageUri);
   const catSrc = webview.asWebviewUri(catImageUri);
   const nonce = getNonce();
-  console.log('catSrc', catSrc);
-  console.log('webview.cspSource', webview.cspSource);
+  //console.log('catSrc', catSrc);
+  //console.log('webview.cspSource', webview.cspSource);
   
   return  `<!DOCTYPE html>
 <html lang="en">
@@ -106,7 +106,7 @@ export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.
 
 
 /**
- * Webviewのオプションを取得する関数
+ * Webviewのオプションを生成して返却する
  * @param extensionUri 
  * @returns 
  */
