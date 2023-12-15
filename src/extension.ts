@@ -17,7 +17,8 @@ export function activate(context: vscode.ExtensionContext) {
       new MyLoveCatViewProvider(context.extensionUri, configImagePath))
   );
   //==========================================================================
-  // コマンド実行時: explorer の表示が隠れていた場合は展開して表示
+  // [MyLoveCat: Explorer View] コマンド実行時
+  // explorer の表示が隠れていた場合は展開して表示
   //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewExplorerMyLoveCat', () => {
@@ -27,7 +28,8 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   //==========================================================================
-  // コマンド実行時: エディタに表示
+  // [MyLoveCat: Panel View] コマンド実行時
+  // エディタに表示
   //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewPanelMyLoveCat', () => {
@@ -35,7 +37,8 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   //==========================================================================
-  // コマンド実行時: 画像をランダムに差し替え
+  // [MyLoveCat: Image Random Update] コマンド実行時
+  // 画像をランダムに差し替え
   //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewMyLoveCatRandom', () => {
