@@ -1,4 +1,8 @@
 {
+  "include": [
+    "src/**/*.ts",
+    "src/@types/google.d.ts"
+  ],
 	"compilerOptions": {
 		"module": "commonjs",
 		"target": "ES2020",

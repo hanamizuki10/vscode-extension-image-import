@@ -12,3 +12,20 @@
 
 ## 技術
  - Webview
+
+## 構成
+src/extension.ts: ユーザー操作に応じた制御
+src/MyLoveCatViewPanel.ts: 表示パネルのロジック
+src/MyLoveCatViewProvider.ts: データ提供ロジック
+src/utils.ts: 共通のユーティリティ関数
+src/services/LocalImageService.ts: 特定フォルダから画像を取得する
+src/services/GooglePhotosService.ts: Google Photos APIから画像を取得する
+
+###  バージョン
+node v20以上
+nodebrew use v20.10.0
+
+asdf install nodejs 16.20.2
+asdf list
+asdf local nodejs 20.11.0
+npm install

@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import fetch from 'node-fetch';
 
 /**
  * ファイル一覧を取得する
@@ -48,7 +47,7 @@ function getNonce() {
 export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri, configImagePath: string | undefined): string {
   // ランダムに表示する画像を選択
   let imagePath;
-  let filename = '';
+  let filename;
   let catImageUri;
   if (configImagePath) {
     // console.log('configImagePath', JSON.stringify(configImagePath));
@@ -69,9 +68,9 @@ export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.
     //console.log('joinPath', vscode.Uri.joinPath(extensionUri, imagePath, filename));
     catImageUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, imagePath, filename));
   }
-  // console.log('imagePath', imagePath);
-  // console.log('filename', filename);
-  // 画像が存在しない場合はエラーメッセージを表示
+  //console.log('imagePath', imagePath);
+  //console.log('filename', filename);
+  // ファイルパスを生成 
   if (!catImageUri) {
     return '画像が存在しません。設定[vscode-image-import]-[Image Path]を見直してください。';
   }
@@ -98,61 +97,12 @@ export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.
 <title>My Love Cat</title>
 </head>
 <body>
-<p>フォルダから画像参照</p>
-<p>${imagePath}</p>
 <p>${filename}</p>
 <img src="${catSrc}"></img>
 </body>
 </html>`;
 }
 
-export async function getHtmlForWebviewEx(webview: vscode.Webview, extensionUri: vscode.Uri, baseUrls: string[]): Promise<string> {
-// memo :
-// mediaItems.baseUrlの値を活用（少なくても、ログインしなくても表示可能）productUrlはログインしている場合にのみ利用可能
-// baseUrlはしばらくすると使えなくなる動きをしている。直前にとってきた値のみ使えるようになっている
-  const baseUrl = baseUrls[Math.floor(Math.random() * baseUrls.length)];
-  if (baseUrl === undefined) {
-    return `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-    <meta charset="UTF-8">
-    <title>My Love Cat</title>
-    </head>
-    <body>
-    <p>GoogleAPIを経由した画像の表示</p>
-    <p>指定のアルバムには画像情報が存在しない、または、認証されていないためGoogleフォトからメディア情報を取得できません。</p>
-    </body>
-    </html>`;
-  }
-  //console.log('baseUrl', baseUrl);
-  const nonce = getNonce();
-
-  const result = await isURLAlive(baseUrl);
-  console.log(`${baseUrl} is alive: ${result}`);
-
-  const imgWidth = 480; // mediaItems.mediaMetadata.widthの値を活用
-  return  `<!DOCTYPE html>
-  <html lang="en">
-  <head>
-  <meta charset="UTF-8">
-  <!--
-  コンテンツセキュリティポリシーを使用して、httpsまたは拡張ディレクトリからの画像の読み込みのみを許可し、
-  特定の nonce を持つスクリプトのみを許可します。
-  -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none';
-    style-src ${webview.cspSource} 'nonce-${nonce}';
-    img-src ${webview.cspSource} https:;
-    script-src 'nonce-${nonce}';
-    font-src ${webview.cspSource};">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Love Cat</title>
-  </head>
-  <body>
-  <p>GoogleAPIを経由した画像の表示</p>
-  <img width="${imgWidth}"  src="${baseUrl}"></img>
-  </body>
-  </html>`;
-}
 
 /**
  * Webviewのオプションを生成して返却する
@@ -172,26 +122,3 @@ export function getWebviewOptions(
   };
   return webviewOptions;
 }
-async function checkURL(url: string): Promise<void> {
-  try {
-      const response = await fetch(url);
-      if (response.ok) {
-          console.log(`${url} is alive with status: ${response.status}`);
-      } else {
-          console.log(`${url} is down with status: ${response.status}`);
-      }
-  } catch (error: any) {
-      console.log(`Error checking ${url}: ${error.message}`);
-  }
-}
-
-// 使用例
-async function isURLAlive(url: string): Promise<boolean> {
-  try {
-      const response = await fetch(url);
-      return response.ok; // ステータスコードが200-299ならtrue、それ以外ならfalseを返します
-  } catch (error) {
-      return false; // ネットワークエラーやその他の例外でリクエストが失敗した場合はfalseを返します
-  }
-}
-
