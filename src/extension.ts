@@ -157,17 +157,16 @@ function updateRandomDisplay() {
 
 // アルバムをリストするための関数、トークン失効時に再試行する
 async function listAlbumsWithRetry(outputCh: vscode.OutputChannel, context: vscode.ExtensionContext) {
-  const oauth2Client = await refreshToken(outputCh, context);
   try {
     // '茶々と長政' というタイトルのアルバム ID を取得
     const config = vscode.workspace.getConfiguration('vscode-image-import');
     const targetAlbumTitle = config.get<string>('googlePhotoAlbumTitle', '茶々と長政');
     outputCh.appendLine(`Target album title: ${targetAlbumTitle}`);
-    const albumId = await findAlbumIdByTitle(outputCh, oauth2Client, targetAlbumTitle);
+    const albumId = await findAlbumIdByTitle(outputCh, context, targetAlbumTitle);
     outputCh.appendLine(`${targetAlbumTitle}:${albumId}`);
     if (albumId) {
       // アルバム内のメディアアイテムを取得
-      const baseUrls = await findMediaItem(outputCh, oauth2Client, albumId);
+      const baseUrls = await findMediaItem(outputCh, context, albumId);
       if (baseUrls) {
         outputCh.appendLine(`Found media item: ${baseUrls.length}`);
         MyLoveCatViewPanel.updateMediaItemBaseUrls(baseUrls);
@@ -181,8 +180,8 @@ async function listAlbumsWithRetry(outputCh: vscode.OutputChannel, context: vsco
       outputCh.appendLine('No album found.');
     }
   } catch (error: any) {
-    outputCh.appendLine('Failed to list albums: ' + error.code + ':' + error.message);
-    vscode.window.showErrorMessage('Failed to list albums: ' + error.code + ':' + error.message);
+    outputCh.appendLine('Failed to list albums: ' + error.message);
+    vscode.window.showErrorMessage('Failed to list albums: ' + error.message);
     throw error;
   }
 }

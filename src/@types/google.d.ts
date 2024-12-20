@@ -1,9 +1,16 @@
 interface GoogleTokens {
-    access_token: string;
-    refresh_token: string;
-    scope: string;
-    token_type: string;
-    expiry_date: number;
+  access_token: string;
+  refresh_token: string;
+  scope: string;
+  token_type: string;
+  expiry_date: number;
+}
+interface ErrorResponse {
+  error: {
+    code: number;
+    message: string;
+    status: string;
+  };
 }
 
 interface AlbumsResponse {

@@ -17,14 +17,14 @@ export async function isSetClientIdSecret(outputCh: vscode.OutputChannel, secret
   return true;
 }
 // 認証済みか確認する
-export function isAuthenticated(tokens: GoogleTokens | undefined): boolean {
+export function isAuthenticated(tokens: Auth.Credentials): boolean {
   if (!tokens) {
     return false; // 認証されていない
   }
   return true;
 }
 // トークンの有効期限が切れているか確認する
-export function isTokenExpired(tokens: GoogleTokens | undefined): boolean {
+export function isTokenExpired(tokens: Auth.Credentials): boolean {
   if (tokens && tokens.expiry_date && tokens.expiry_date < Date.now()) {
     return true;  // トークンの有効期限が切れている
   }
@@ -62,6 +62,7 @@ export async function authenticate(
   const oauth2Client = await getOAuth2Client(outputCh, context.secrets);
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
+    prompt: 'consent',
     scope: SCOPES,
   });
 
@@ -77,14 +78,16 @@ export async function authenticate(
         outputCh.appendLine('Handling the OAuth callback...');
         const query = url.parse(req.url, true).query;
         const code = query.code as string;
-
         if (code) {
           try {
             const { tokens } = await oauth2Client.getToken(code);
             oauth2Client.setCredentials(tokens);
             context.globalState.update('oauthTokens', tokens);
             res.end('Authentication successful! You can close this window.');
-            outputCh.appendLine('Authentication successful!');
+            outputCh.appendLine('Authentication successful!' + JSON.stringify(tokens));
+            outputCh.appendLine('    [新しいアクセストークン] ' + JSON.stringify(tokens.access_token));
+            outputCh.appendLine('    [新しいリフレッシュトークン] ' + JSON.stringify(tokens.refresh_token));
+            outputCh.appendLine('    [新しい有効期限] ' + JSON.stringify(tokens.expiry_date));
             resolve();
           } catch (err: any) {
             res.end('Authentication failed!');
@@ -113,31 +116,39 @@ export async function refreshToken(
   const oauth2Client = await getOAuth2Client(outputCh, context.secrets);
   const tokens: GoogleTokens | undefined = context.globalState.get('oauthTokens');
   if (tokens && !isCredentialsSet(oauth2Client)) {
-    // トークン情報が登録されていて認証情報がセットされていない場合、トークン情報をセットする
-    outputCh.appendLine('Setting credentials...');
     oauth2Client.setCredentials(tokens);
   }
-
-  if (!isAuthenticated(tokens)) {
+  if (!isAuthenticated(oauth2Client.credentials)) {
     // もし、認証情報が存在しない場合、認証を行う
     outputCh.appendLine('Authenticating...');
     if (await isSetClientIdSecret(outputCh, context.secrets)) {
       await authenticate(outputCh, context);
+      return refreshToken(outputCh, context);
     } else {
       throw new Error('OAuth 2.0 クライアント情報の取得に失敗しました。[MyLoveCat: クライアント ID とクライアント シークレットの設定] コマンド実行して情報を入力してください。');
     }
-  } else if (isTokenExpired(tokens)) {
+  } else if (isTokenExpired(oauth2Client.credentials)) {
     // もし、有効期限が切れていた場合、リフレッシュする
     try {
+      outputCh.appendLine('    [有効期限切れ]  Refreshing token...' + JSON.stringify(oauth2Client.credentials));
       outputCh.appendLine('Refreshing token...');
-      const tokens: GoogleTokens | undefined = context.globalState.get('oauthTokens');
-      oauth2Client.setCredentials({refresh_token: tokens?.refresh_token});
       const {credentials} = await oauth2Client.refreshAccessToken();
       oauth2Client.setCredentials(credentials);
       context.globalState.update('oauthTokens', credentials);
+      outputCh.appendLine('    [新しいアクセストークン] ' + JSON.stringify(oauth2Client.credentials.access_token));
+      outputCh.appendLine('    [新しいリフレッシュトークン] ' + JSON.stringify(oauth2Client.credentials.refresh_token));
+      outputCh.appendLine('    [新しい有効期限] ' + JSON.stringify(oauth2Client.credentials.expiry_date));
     } catch (error: any) {
-      outputCh.appendLine('Failed to refresh token: ' + error.message);
-      vscode.window.showErrorMessage('Failed to refresh token: ' + error.message);
+      if (error.message === 'invalid_grant') {
+        // リフレッシュトークンが無効な場合、再認証を行う
+        outputCh.appendLine('    [リフレッシュトークンが無効]  再認証してください...');
+        await authenticate(outputCh, context);
+        return refreshToken(outputCh, context);
+      } else {
+        outputCh.appendLine('Failed to refresh token: ' + error.message);
+        vscode.window.showErrorMessage('Failed to refresh token: ' + error.message);
+        throw new Error('Failed to refresh token: ' + error.message + ':' + error.code);
+      }
     }
   }
   return oauth2Client;
@@ -151,25 +162,27 @@ export async function getAlbums(outputCh: vscode.OutputChannel, context: vscode.
     return albumsResponse.albums;
   } catch (err: any) {
     console.error('Failed to fetch albums:', err);
-    throw new Error('getAlbums - Authentication required.');
+    throw new Error('getAlbums - Authentication required.' + err.message + ':' + err.code);
   }
 }
 
 // 指定されたタイトルのアルバム ID を取得する関数
-export async function findAlbumIdByTitle(outputCh: vscode.OutputChannel, oauth2Client: Auth.OAuth2Client, title: string): Promise<string | null> {
+export async function findAlbumIdByTitle(outputCh: vscode.OutputChannel, context: vscode.ExtensionContext, title: string): Promise<string | null> {
+  const oauth2Client = await refreshToken(outputCh, context);
+  outputCh.appendLine('[findAlbumIdByTitle]Searching for albums...title:' + title);
+  outputCh.appendLine('[findAlbumIdByTitle]Searching for albums...Access Token:' + oauth2Client.credentials.access_token);
+  const accessToken = oauth2Client.credentials.access_token || '';
   try {
-    const accessToken = oauth2Client.credentials.access_token || '';
     const albumsResponse = await fetchAlbums(accessToken);
     return processAlbumsResponse(outputCh, albumsResponse, title);
   } catch (err: any) {
-    console.error('Failed to fetch albums:', err);
-    try {
-      const newAccessToken = await refreshAccessToken(oauth2Client);
-      const albumsResponse = await fetchAlbums(newAccessToken);
-      return processAlbumsResponse(outputCh, albumsResponse, title);
-    } catch (refreshError) {
-      console.error('Failed to refresh token:', refreshError);
-      throw new Error('findAlbumIdByTitle - Authentication required.');
+    if (err.message === 'UNAUTHENTICATED') {
+      // 認証が必要な場合、再認証を行う
+      await authenticate(outputCh, context);
+      return findAlbumIdByTitle(outputCh, context, title);
+    } else {
+      outputCh.appendLine('[findAlbumIdByTitle]Failed to search albums.' + err.message);
+      throw new Error('[findAlbumIdByTitle]Failed to search albums.' + err.message);
     }
   }
 }
@@ -192,34 +205,21 @@ function processAlbumsResponse(outputCh: vscode.OutputChannel, albumsResponse: A
   }
 }
 
-// アクセストークンをリフレッシュする関数
-async function refreshAccessToken(oauth2Client: Auth.OAuth2Client): Promise<string> {
-  oauth2Client.setCredentials({refresh_token: oauth2Client.credentials.refresh_token});
-  const {credentials} = await oauth2Client.refreshAccessToken();
-  oauth2Client.setCredentials(credentials);
-  return credentials.access_token || '';
-}
-
 // 指定されたタイトルのアルバム ID を取得する関数
-export async function findMediaItem(outputCh: vscode.OutputChannel, oauth2Client: Auth.OAuth2Client, albumId: string): Promise<string[]> {
+export async function findMediaItem(outputCh: vscode.OutputChannel, context: vscode.ExtensionContext, albumId: string): Promise<string[]> {
+  const oauth2Client = await refreshToken(outputCh, context);
+  const accessToken = oauth2Client.credentials.access_token || '';
   try {
-    const accessToken = oauth2Client.credentials.access_token || '';
     const mediaItemsResponse = await searchMediaItems(accessToken, albumId);
     return getRandomMediaItem(mediaItemsResponse);
   } catch (err: any) {
-    if (err.code === 401) { // トークンが期限切れの場合
-      console.log('Refreshing access token...');
-      try {
-        const newAccessToken = await refreshAccessToken(oauth2Client);
-        const mediaItemsResponse = await searchMediaItems(newAccessToken, albumId);
-        return getRandomMediaItem(mediaItemsResponse);
-      } catch (refreshError) {
-        console.error('Failed to refresh token:', refreshError);
-        throw new Error('findMediaItem - Authentication required.');
-      }
+    if (err.message === 'UNAUTHENTICATED') {
+      // 認証が必要な場合、再認証を行う
+      await authenticate(outputCh, context);
+      return findMediaItem(outputCh, context, albumId);
     } else {
-      console.error('Failed to search media items:', err);
-      throw err;
+      outputCh.appendLine('Failed to search media items.'+ err.message );
+      throw new Error('[findMediaItem] Failed to search media items.'+ err.message);
     }
   }
 }

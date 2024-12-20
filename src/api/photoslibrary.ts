@@ -11,7 +11,8 @@ export async function fetchAlbums(accessToken: string): Promise<AlbumsResponse> 
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch albums');
+    const error = await response.json();
+    throw new Error((error as ErrorResponse).error.status);
   }
   const data = await response.json();
   return data as AlbumsResponse;
@@ -31,7 +32,8 @@ export async function searchMediaItems(accessToken: string, albumId: string): Pr
     })
   });
   if (!response.ok) {
-    throw new Error('Failed to fetch albums');
+    const error = await response.json();
+    throw new Error((error as ErrorResponse).error.status);
   }
   const data = await response.json();
   return data as MediaItemsResponse;
