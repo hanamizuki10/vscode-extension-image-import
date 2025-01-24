@@ -78,10 +78,6 @@
       {
         "command": "vscode-image-import.inputSecretData",
         "title": "MyLoveCat: クライアント ID とクライアント シークレットの設定"
-      },
-      {
-        "command": "vscode-image-import.randomUpdateFromGoogle",
-        "title": "MyLoveCat: Image Random Update(From Google)"
       }
     ]
   },
