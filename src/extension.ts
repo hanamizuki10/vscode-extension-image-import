@@ -100,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const tokens = context.globalState.get('oauthTokens');
       outputCh.appendLine('tokens: ' + JSON.stringify(tokens));
       listAlbumsWithRetry(outputCh, context);
-  })
+    })
   );
   //==========================================================================
   // 初期設定
@@ -122,6 +122,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 設定変更時
   // - インターバルを更新
   // - 画像パスを更新
+  // - Google フォトから画像を取得するかどうか（false の場合は内部保存画像を利用します）の状態更新
   //==========================================================================
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
     const config = vscode.workspace.getConfiguration('vscode-image-import');
@@ -138,6 +139,7 @@ export async function activate(context: vscode.ExtensionContext) {
       MyLoveCatViewProvider.updateConfigImagePath(configImagePath);
       outputCh.appendLine(`[change]configImagePath: ${configImagePath}`);
     } else if (e.affectsConfiguration('vscode-image-import.isGooglePhoto')) {
+      // Google フォトから画像を取得するかどうか（false の場合は内部保存画像を利用します）に変更あり
       isGooglePhoto = config.get<boolean>('isGooglePhoto', false);
       MyLoveCatViewPanel.updateIsGooglePhoto(isGooglePhoto);
       MyLoveCatViewProvider.updateIsGooglePhoto(isGooglePhoto);
@@ -155,10 +157,10 @@ function updateRandomDisplay() {
   MyLoveCatViewProvider.randomUpdate();
 }
 
-// アルバムをリストするための関数、トークン失効時に再試行する
+// アルバムから写真一覧を取得して内部変数に保持する
 async function listAlbumsWithRetry(outputCh: vscode.OutputChannel, context: vscode.ExtensionContext) {
   try {
-    // '茶々と長政' というタイトルのアルバム ID を取得
+    // 設定値に保存されたアルバムタイトル（デフォルト:'茶々と長政'）のアルバム ID を取得
     const config = vscode.workspace.getConfiguration('vscode-image-import');
     const targetAlbumTitle = config.get<string>('googlePhotoAlbumTitle', '茶々と長政');
     outputCh.appendLine(`Target album title: ${targetAlbumTitle}`);
@@ -169,8 +171,10 @@ async function listAlbumsWithRetry(outputCh: vscode.OutputChannel, context: vsco
       const baseUrls = await findMediaItem(outputCh, context, albumId);
       if (baseUrls) {
         outputCh.appendLine(`Found media item: ${baseUrls.length}`);
+        // 内部変数に保持したメディアアイテムの URL一覧 を更新
         MyLoveCatViewPanel.updateMediaItemBaseUrls(baseUrls);
         MyLoveCatViewProvider.updateMediaItemBaseUrls(baseUrls);
+        // ランダムで表示の状態を更新
         MyLoveCatViewPanel.randomUpdate();
         MyLoveCatViewProvider.randomUpdate();
       } else {
