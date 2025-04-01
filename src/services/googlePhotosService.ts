@@ -115,9 +115,11 @@ export async function refreshToken(
 ): Promise<Auth.OAuth2Client> {
   const oauth2Client = await getOAuth2Client(outputCh, context.secrets);
   const tokens: GoogleTokens | undefined = context.globalState.get('oauthTokens');
+  // トークンが存在し、認証情報がセットされていない場合、認証情報をセットする
   if (tokens && !isCredentialsSet(oauth2Client)) {
     oauth2Client.setCredentials(tokens);
   }
+  // 認証情報が存在しない場合、認証を行う
   if (!isAuthenticated(oauth2Client.credentials)) {
     // もし、認証情報が存在しない場合、認証を行う
     outputCh.appendLine('Authenticating...');

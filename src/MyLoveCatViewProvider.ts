@@ -15,9 +15,11 @@ export class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
   constructor(
     private readonly _extensionUri: vscode.Uri,
     configImagePath: string | undefined,
+    isGooglePhoto: boolean = false,
     private readonly outputCh?: vscode.OutputChannel,
   ) {
     this.configImagePath = configImagePath;
+    this.isGooglePhoto = isGooglePhoto;
     MyLoveCatViewProvider.currentProvider = this;
     this._outputCh = outputCh;
   }
@@ -35,11 +37,10 @@ export class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
   private async _update() {
     if (this._view) {
       const webview = this._view.webview;
-      //this._outputCh?.appendLine(`MyLoveCatViewProvider _update this.isGooglePhoto: ${this.isGooglePhoto}`);
       if (this.isGooglePhoto) {
-        this._view.webview.html = await getHtmlForWebviewEx(webview, this._extensionUri, this.baseUrls);
+        webview.html = await getHtmlForWebviewEx(webview, this._extensionUri, this.baseUrls);
       } else {
-        this._view.webview.html = getHtmlForWebview(webview, this._extensionUri, this.configImagePath);
+        webview.html = getHtmlForWebview(webview, this._extensionUri, this.configImagePath);
       }
     }
   }

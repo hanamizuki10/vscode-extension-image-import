@@ -172,20 +172,8 @@ export function getWebviewOptions(
   };
   return webviewOptions;
 }
-async function checkURL(url: string): Promise<void> {
-  try {
-      const response = await fetch(url);
-      if (response.ok) {
-          console.log(`${url} is alive with status: ${response.status}`);
-      } else {
-          console.log(`${url} is down with status: ${response.status}`);
-      }
-  } catch (error: any) {
-      console.log(`Error checking ${url}: ${error.message}`);
-  }
-}
 
-// 使用例
+// URLが生きているかどうかを確認する
 async function isURLAlive(url: string): Promise<boolean> {
   try {
       const response = await fetch(url);

@@ -35,7 +35,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       'viewExplorerMyLoveCat',
-      new MyLoveCatViewProvider(context.extensionUri, configImagePath, outputCh))
+      new MyLoveCatViewProvider(context.extensionUri, configImagePath, isGooglePhoto, outputCh))
   );
   //==========================================================================
   // [MyLoveCat: Explorer View] コマンド実行時
@@ -54,7 +54,7 @@ export async function activate(context: vscode.ExtensionContext) {
   //==========================================================================
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewPanelMyLoveCat', () => {
-      MyLoveCatViewPanel.createOrShow(context.extensionUri, configImagePath, outputCh);
+      MyLoveCatViewPanel.createOrShow(context.extensionUri, configImagePath, isGooglePhoto, outputCh);
     })
   );
   //==========================================================================
