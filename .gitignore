@@ -4,3 +4,4 @@ node_modules
 .vscode-test/
 *.vsix
 __memo__
+.DS_Store
