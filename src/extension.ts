@@ -6,95 +6,108 @@ import { MyLoveCatViewPanel } from './MyLoveCatViewPanel';
 import { MyLoveCatViewProvider } from './MyLoveCatViewProvider';
 import { createSecretPanel } from './secretPanel';
 import { createSelectAlbumPanel } from './selectAlbumPanel';
-import {
-  authenticate,
-  refreshToken,
-  getAlbums,
-  findAlbumIdByTitle,
-  findMediaItem
-} from './services/googlePhotosService';
+import { AuthService } from './services/authService';
+import { GooglePhotosService } from './services/googlePhotosService';
+/**
+ * 拡張機能のエントリーポイント
+ */
 export async function activate(context: vscode.ExtensionContext) {
-  //==========================================================================
-  // 設定値取得
-  //==========================================================================
-  const outputCh = vscode.window.createOutputChannel("VScode Image Import");
-  outputCh.show();  // 出力チャンネルを表示
-  outputCh.appendLine('Congratulations, your extension "vscode-image-import" is now active!');
-
-  const config = vscode.workspace.getConfiguration('vscode-image-import');
-  let intervalSeconds = config.get<number>('intervalSeconds', 10);
-  let configImagePath = config.get<string>('imagePath', '');
-  let isGooglePhoto = config.get<boolean>('isGooglePhoto', false);
-
+  // 出力チャンネルの初期化
+  const outputCh = initializeOutputChannel();
+  
+  // 設定値の取得
+  const { intervalSeconds, configImagePath, isGooglePhoto } = getConfiguration();
   outputCh.appendLine(`intervalSeconds: ${intervalSeconds}`);
   outputCh.appendLine(`configImagePath: ${configImagePath}`);
   outputCh.appendLine(`isGooglePhoto: ${isGooglePhoto}`);
-  //==========================================================================
-  // explorer に表示
-  //==========================================================================
+  
+  // コマンドの登録
+  registerCommands(context, outputCh, configImagePath, isGooglePhoto);
+  
+  // 初期設定
+  initializeViews(isGooglePhoto);
+  
+  // Google Photosからの画像取得（設定が有効な場合）
+  if (isGooglePhoto) {
+    vscode.commands.executeCommand('vscode-image-import.randomUpdateFromGoogle');
+  }
+  
+  // 画像更新タイマーの設定
+  const interval = setupImageUpdateTimer(context, intervalSeconds);
+  
+  // 設定変更時のイベントハンドラを登録
+  registerConfigChangeHandler(context, outputCh, interval);
+}
+
+/**
+ * 出力チャンネルを初期化する
+ */
+function initializeOutputChannel(): vscode.OutputChannel {
+  const outputCh = vscode.window.createOutputChannel("VScode Image Import");
+  outputCh.show();
+  outputCh.appendLine('Congratulations, your extension "vscode-image-import" is now active!');
+  return outputCh;
+}
+
+/**
+ * 設定値を取得する
+ */
+function getConfiguration(): { intervalSeconds: number; configImagePath: string; isGooglePhoto: boolean } {
+  const config = vscode.workspace.getConfiguration('vscode-image-import');
+  const intervalSeconds = config.get<number>('intervalSeconds', 10);
+  const configImagePath = config.get<string>('imagePath', '');
+  const isGooglePhoto = config.get<boolean>('isGooglePhoto', false);
+  
+  return { intervalSeconds, configImagePath, isGooglePhoto };
+}
+
+/**
+ * コマンドを登録する
+ */
+function registerCommands(
+  context: vscode.ExtensionContext, 
+  outputCh: vscode.OutputChannel, 
+  configImagePath: string, 
+  isGooglePhoto: boolean
+): void {
+  // エクスプローラーにWebViewを登録
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       'viewExplorerMyLoveCat',
-      new MyLoveCatViewProvider(context.extensionUri, configImagePath, isGooglePhoto, outputCh))
+      new MyLoveCatViewProvider(context.extensionUri, configImagePath, isGooglePhoto, outputCh)
+    )
   );
-  //==========================================================================
-  // [MyLoveCat: Explorer View] コマンド実行時
-  // explorer の表示が隠れていた場合は展開して表示
-  //==========================================================================
+  
+  // [MyLoveCat: Explorer View] コマンド
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewExplorerMyLoveCat', () => {
-      // すでにエクスプローラーには情報を表示しているけど、フォーカスを当てる感じ
-      // 隠れていたら展開して表示するしエクスプローラーを閉じていたら開く
       vscode.commands.executeCommand('viewExplorerMyLoveCat.focus');
     })
   );
-  //==========================================================================
-  // [MyLoveCat: Panel View] コマンド実行時
-  // エディタに表示
-  //==========================================================================
+  
+  // [MyLoveCat: Panel View] コマンド
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewPanelMyLoveCat', () => {
       MyLoveCatViewPanel.createOrShow(context.extensionUri, configImagePath, isGooglePhoto, outputCh);
     })
   );
-  //==========================================================================
-  // [MyLoveCat: Image Random Update] コマンド実行時
-  // 画像をランダムに差し替え
-  //==========================================================================
+  
+  // [MyLoveCat: Image Random Update] コマンド
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.viewMyLoveCatRandom', () => {
-      // 描画されている猫をrandomで描画切り替え
       MyLoveCatViewPanel.randomUpdate();
       MyLoveCatViewProvider.randomUpdate();
     })
   );
-
-  //==========================================================================
-  // [MyLoveCat: クライアント ID とクライアント シークレットの設定] コマンド実行時
-  // 基本は最初の１回のみ実行を想定（もしくは意図的に変更をしたい時のみ）
-  //==========================================================================
+  
+  // [MyLoveCat: クライアント ID とクライアント シークレットの設定] コマンド
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.inputSecretData', () => {
-      // 「クライアント ID とクライアント シークレットの設定」パネルを開き、秘密情報を保存
-      const panel = createSecretPanel(context);
-      // パネルが閉じられたことを検知したら再認証を促す
-      panel.onDidDispose(async () => {
-        await authenticate(outputCh, context);
-        // Google Photos から画像一覧を取得
-        const albums = await getAlbums(outputCh, context);
-        outputCh.appendLine('albums: ' + JSON.stringify(albums));
-        const albumTitle = await createSelectAlbumPanel(context, albums);
-        outputCh.appendLine('albumTitle: ' + JSON.stringify(albumTitle));
-        // ユーザー選択結果を保存
-        config.update('googlePhotoAlbumTitle', albumTitle, true);
-      }, null, context.subscriptions);
+      registerSecretDataCommand(context, outputCh);
     })
   );
   
-  //==========================================================================
-  // [MyLoveCat: Image Random Update(From Google)] コマンド実行時
-  // Google Photos のアルバム一覧を表示
-  //==========================================================================
+  // [MyLoveCat: Image Random Update(From Google)] コマンド
   context.subscriptions.push(
     vscode.commands.registerCommand('vscode-image-import.randomUpdateFromGoogle', async () => {
       const tokens = context.globalState.get('oauthTokens');
@@ -102,35 +115,67 @@ export async function activate(context: vscode.ExtensionContext) {
       listAlbumsWithRetry(outputCh, context);
     })
   );
-  //==========================================================================
-  // 初期設定
-  //==========================================================================
+}
+
+/**
+ * シークレットデータ入力コマンドの処理
+ */
+function registerSecretDataCommand(context: vscode.ExtensionContext, outputCh: vscode.OutputChannel): void {
+  const panel = createSecretPanel(context);
+  const config = vscode.workspace.getConfiguration('vscode-image-import');
+  
+  // パネルが閉じられたことを検知したら再認証を促す
+  panel.onDidDispose(async () => {
+    await AuthService.authenticate(outputCh, context);
+    // Google Photos から画像一覧を取得
+    const albums = await GooglePhotosService.getAlbums(outputCh, context);
+    outputCh.appendLine('albums: ' + JSON.stringify(albums));
+    const albumTitle = await createSelectAlbumPanel(context, albums);
+    outputCh.appendLine('albumTitle: ' + JSON.stringify(albumTitle));
+    // ユーザー選択結果を保存
+    config.update('googlePhotoAlbumTitle', albumTitle, true);
+  }, null, context.subscriptions);
+}
+
+/**
+ * ビューの初期化
+ */
+function initializeViews(isGooglePhoto: boolean): void {
   MyLoveCatViewPanel.updateIsGooglePhoto(isGooglePhoto);
   MyLoveCatViewProvider.updateIsGooglePhoto(isGooglePhoto);
+}
 
-  if (isGooglePhoto) {
-    // Google Photos から画像を取得
-    vscode.commands.executeCommand('vscode-image-import.randomUpdateFromGoogle');
-  }
-  //==========================================================================
-  // 指定数秒おきにランダムに画像を差し替え
-  //==========================================================================
-  let interval = setInterval(updateRandomDisplay, intervalSeconds * 1000);
+/**
+ * 画像更新タイマーの設定
+ */
+function setupImageUpdateTimer(context: vscode.ExtensionContext, intervalSeconds: number): NodeJS.Timeout {
+  const interval = setInterval(updateRandomDisplay, intervalSeconds * 1000);
   // 拡張機能が非アクティブになった時にタイマーをクリア
   context.subscriptions.push({ dispose: () => clearInterval(interval) });
-  //==========================================================================
-  // 設定変更時
-  // - インターバルを更新
-  // - 画像パスを更新
-  // - Google フォトから画像を取得するかどうか（false の場合は内部保存画像を利用します）の状態更新
-  //==========================================================================
+  return interval;
+}
+
+/**
+ * 設定変更時のイベントハンドラを登録
+ */
+function registerConfigChangeHandler(
+  context: vscode.ExtensionContext, 
+  outputCh: vscode.OutputChannel, 
+  interval: NodeJS.Timeout
+): void {
+  let intervalSeconds = vscode.workspace.getConfiguration('vscode-image-import').get<number>('intervalSeconds', 10);
+  let configImagePath = vscode.workspace.getConfiguration('vscode-image-import').get<string>('imagePath', '');
+  let isGooglePhoto = vscode.workspace.getConfiguration('vscode-image-import').get<boolean>('isGooglePhoto', false);
+  let updatedInterval = interval;
+  
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
     const config = vscode.workspace.getConfiguration('vscode-image-import');
+    
     if (e.affectsConfiguration('vscode-image-import.intervalSeconds')) {
       // ランダム表示の更新間隔（秒）に変更あり
       intervalSeconds = config.get<number>('intervalSeconds', 10);
-      clearInterval(interval);
-      interval = setInterval(updateRandomDisplay, intervalSeconds * 1000);
+      clearInterval(updatedInterval);
+      updatedInterval = setInterval(updateRandomDisplay, intervalSeconds * 1000);
       outputCh.appendLine(`[change]intervalSeconds: ${intervalSeconds}`);
     } else if (e.affectsConfiguration('vscode-image-import.imagePath')) {
       // 画像が含まれているフォルダに変更あり
@@ -157,18 +202,20 @@ function updateRandomDisplay() {
   MyLoveCatViewProvider.randomUpdate();
 }
 
-// アルバムから写真一覧を取得して内部変数に保持する
+/**
+ * アルバムから写真一覧を取得して内部変数に保持する
+ */
 async function listAlbumsWithRetry(outputCh: vscode.OutputChannel, context: vscode.ExtensionContext) {
   try {
     // 設定値に保存されたアルバムタイトル（デフォルト:'茶々と長政'）のアルバム ID を取得
     const config = vscode.workspace.getConfiguration('vscode-image-import');
     const targetAlbumTitle = config.get<string>('googlePhotoAlbumTitle', '茶々と長政');
     outputCh.appendLine(`Target album title: ${targetAlbumTitle}`);
-    const albumId = await findAlbumIdByTitle(outputCh, context, targetAlbumTitle);
+    const albumId = await GooglePhotosService.findAlbumIdByTitle(outputCh, context, targetAlbumTitle);
     outputCh.appendLine(`${targetAlbumTitle}:${albumId}`);
     if (albumId) {
       // アルバム内のメディアアイテムを取得
-      const baseUrls = await findMediaItem(outputCh, context, albumId);
+      const baseUrls = await GooglePhotosService.findMediaItem(outputCh, context, albumId);
       if (baseUrls) {
         outputCh.appendLine(`Found media item: ${baseUrls.length}`);
         // 内部変数に保持したメディアアイテムの URL一覧 を更新

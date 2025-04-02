@@ -1,20 +1,24 @@
 import * as vscode from 'vscode';
-import { getHtmlForWebview, getHtmlForWebviewEx, getWebviewOptions } from './utils';
+import { getWebviewOptions } from './utils';
+import { ViewBase } from './common/ViewBase';
 
 /**
  * エディタに表示するためのクラス
  */
-export class MyLoveCatViewPanel {
+export class MyLoveCatViewPanel extends ViewBase {
   public static currentPanel: MyLoveCatViewPanel | undefined;
-  public configImagePath: string | undefined;
-  public isGooglePhoto: boolean = false;
-  public baseUrls: string[] = [];
   private readonly _panel: vscode.WebviewPanel;
-  private readonly _extensionUri: vscode.Uri;
-  private readonly _outputCh: vscode.OutputChannel | undefined;
   private _disposables: vscode.Disposable[] = [];
 
-  public static createOrShow(extensionUri: vscode.Uri, configImagePath: string | undefined, isGooglePhoto: boolean = false, outputCh?: vscode.OutputChannel) {
+  /**
+   * パネルを作成または表示する
+   */
+  public static createOrShow(
+    extensionUri: vscode.Uri, 
+    configImagePath: string | undefined, 
+    isGooglePhoto: boolean = false, 
+    outputCh?: vscode.OutputChannel
+  ): void {
     // すでにパネル表示している場合は、フォーカスを当て再表示させる
     if (MyLoveCatViewPanel.currentPanel) {
       MyLoveCatViewPanel.currentPanel._panel.reveal(undefined);
@@ -22,7 +26,7 @@ export class MyLoveCatViewPanel {
     }
 
     // パネル作成
-    const webviewOptions:vscode.WebviewOptions = getWebviewOptions(extensionUri, configImagePath);
+    const webviewOptions: vscode.WebviewOptions = getWebviewOptions(extensionUri, configImagePath);
     const panel = vscode.window.createWebviewPanel(
       'viewPanelMyLoveCat', // パネル識別子
       'My Love Cat', // パネルタイトル
@@ -32,7 +36,9 @@ export class MyLoveCatViewPanel {
     MyLoveCatViewPanel.currentPanel = new MyLoveCatViewPanel(panel, extensionUri, configImagePath, isGooglePhoto, outputCh);
   }
 
-  // コンストラクタ
+  /**
+   * コンストラクタ
+   */
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
@@ -40,18 +46,18 @@ export class MyLoveCatViewPanel {
     isGooglePhoto: boolean = false,
     outputCh?: vscode.OutputChannel,
   ) {
-    this.configImagePath = configImagePath;
-    this.isGooglePhoto = isGooglePhoto;
+    super(extensionUri, configImagePath, isGooglePhoto, outputCh);
     this._panel = panel;
-    this._extensionUri = extensionUri;
-    this._outputCh = outputCh;
-    this._update();
+    this.randomUpdate();
+    
     // パネルが破棄された時のリソース解放処理を登録
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
   }
 
-  // パネルを閉じた時に呼び出される (クリーンアップ処理追加)
-  public dispose() {
+  /**
+   * パネルを閉じた時に呼び出される (クリーンアップ処理追加)
+   */
+  public dispose(): void {
     MyLoveCatViewPanel.currentPanel = undefined;
     this._panel.dispose();
     while (this._disposables.length) {
@@ -62,48 +68,56 @@ export class MyLoveCatViewPanel {
     }
   }
 
-  // 表示内容を更新する
-  private async _update() {
+  /**
+   * 表示内容をランダムに更新する
+   */
+  public randomUpdate(): void {
     if (this._panel.webview) {
-      const webview = this._panel.webview;
-      if (this.isGooglePhoto) {
-        // Google Photoの画像を表示
-        webview.html = await getHtmlForWebviewEx(webview, this._extensionUri, this.baseUrls);
-      } else {
-        // ローカル画像を表示
-        webview.html = getHtmlForWebview(webview, this._extensionUri, this.configImagePath);
-      } 
+      this.updateWebviewContent(this._panel.webview);
     }
   }
 
-  // 設定画面から画像フォルダパスを更新された場合に呼び出される
-  public static updateConfigImagePath(configImagePath: string | undefined) {
+  /**
+   * 設定画面から画像フォルダパスを更新された場合に呼び出される
+   */
+  public static updateConfigImagePath(configImagePath: string | undefined): void {
     if (MyLoveCatViewPanel.currentPanel) {
       if (MyLoveCatViewPanel.currentPanel._panel) {
         // webviewのオプションを更新
-        const webviewOptions: vscode.WebviewOptions = getWebviewOptions(MyLoveCatViewPanel.currentPanel._extensionUri, configImagePath);
+        const webviewOptions: vscode.WebviewOptions = getWebviewOptions(
+          MyLoveCatViewPanel.currentPanel._extensionUri, 
+          configImagePath
+        );
         MyLoveCatViewPanel.currentPanel._panel.webview.options = webviewOptions;
       }
-      MyLoveCatViewPanel.currentPanel.configImagePath = configImagePath;
-    }
-  }
-  public static updateIsGooglePhoto(isGooglePhoto: boolean) {
-    if (MyLoveCatViewPanel.currentPanel) {
-      MyLoveCatViewPanel.currentPanel.isGooglePhoto = isGooglePhoto;
+      MyLoveCatViewPanel.currentPanel.updateConfigImagePath(configImagePath);
     }
   }
 
-  // コマンドから「ランダム表示」を実行された場合に呼び出される
-  public static randomUpdate() {
+  /**
+   * Google Photoモードを更新する
+   */
+  public static updateIsGooglePhoto(isGooglePhoto: boolean): void {
     if (MyLoveCatViewPanel.currentPanel) {
-      MyLoveCatViewPanel.currentPanel._update();
-      return;
+      MyLoveCatViewPanel.currentPanel.updateIsGooglePhoto(isGooglePhoto);
     }
   }
 
-  public static updateMediaItemBaseUrls(baseUrls: string[]) {
+  /**
+   * コマンドから「ランダム表示」を実行された場合に呼び出される
+   */
+  public static randomUpdate(): void {
     if (MyLoveCatViewPanel.currentPanel) {
-      MyLoveCatViewPanel.currentPanel.baseUrls = baseUrls;
+      MyLoveCatViewPanel.currentPanel.randomUpdate();
+    }
+  }
+
+  /**
+   * メディアアイテムのURLリストを更新する
+   */
+  public static updateMediaItemBaseUrls(baseUrls: string[]): void {
+    if (MyLoveCatViewPanel.currentPanel) {
+      MyLoveCatViewPanel.currentPanel.updateMediaItemBaseUrls(baseUrls);
     }
   }
 }
