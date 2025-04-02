@@ -128,7 +128,7 @@ export async function getHtmlForWebviewEx(webview: vscode.Webview, extensionUri:
   const nonce = getNonce();
 
   const result = await isURLAlive(baseUrl);
-  console.log(`${baseUrl} is alive: ${result}`);
+  //console.log(`${baseUrl} is alive: ${result}`);
 
   const imgWidth = 480; // mediaItems.mediaMetadata.widthの値を活用
   return  `<!DOCTYPE html>

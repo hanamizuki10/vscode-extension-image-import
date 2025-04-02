@@ -32,11 +32,8 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.executeCommand('vscode-image-import.randomUpdateFromGoogle');
   }
   
-  // 画像更新タイマーの設定
-  const interval = setupImageUpdateTimer(context, intervalSeconds);
-  
   // 設定変更時のイベントハンドラを登録
-  registerConfigChangeHandler(context, outputCh, interval);
+  registerConfigChangeHandler(context, outputCh);
 }
 
 /**
@@ -146,46 +143,31 @@ function initializeViews(isGooglePhoto: boolean): void {
 }
 
 /**
- * 画像更新タイマーの設定
- */
-function setupImageUpdateTimer(context: vscode.ExtensionContext, intervalSeconds: number): NodeJS.Timeout {
-  const interval = setInterval(updateRandomDisplay, intervalSeconds * 1000);
-  // 拡張機能が非アクティブになった時にタイマーをクリア
-  context.subscriptions.push({ dispose: () => clearInterval(interval) });
-  return interval;
-}
-
-/**
  * 設定変更時のイベントハンドラを登録
  */
 function registerConfigChangeHandler(
   context: vscode.ExtensionContext, 
-  outputCh: vscode.OutputChannel, 
-  interval: NodeJS.Timeout
+  outputCh: vscode.OutputChannel
 ): void {
-  let intervalSeconds = vscode.workspace.getConfiguration('vscode-image-import').get<number>('intervalSeconds', 10);
-  let configImagePath = vscode.workspace.getConfiguration('vscode-image-import').get<string>('imagePath', '');
-  let isGooglePhoto = vscode.workspace.getConfiguration('vscode-image-import').get<boolean>('isGooglePhoto', false);
-  let updatedInterval = interval;
-  
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
     const config = vscode.workspace.getConfiguration('vscode-image-import');
     
     if (e.affectsConfiguration('vscode-image-import.intervalSeconds')) {
       // ランダム表示の更新間隔（秒）に変更あり
-      intervalSeconds = config.get<number>('intervalSeconds', 10);
-      clearInterval(updatedInterval);
-      updatedInterval = setInterval(updateRandomDisplay, intervalSeconds * 1000);
+      const intervalSeconds = config.get<number>('intervalSeconds', 10);
+      // 各コンポーネントに通知して、内部でタイマーを再設定してもらう
+      MyLoveCatViewPanel.updateInterval();
+      MyLoveCatViewProvider.updateInterval();
       outputCh.appendLine(`[change]intervalSeconds: ${intervalSeconds}`);
     } else if (e.affectsConfiguration('vscode-image-import.imagePath')) {
       // 画像が含まれているフォルダに変更あり
-      configImagePath = config.get<string>('imagePath', '');
+      const configImagePath = config.get<string>('imagePath', '');
       MyLoveCatViewPanel.updateConfigImagePath(configImagePath);
       MyLoveCatViewProvider.updateConfigImagePath(configImagePath);
       outputCh.appendLine(`[change]configImagePath: ${configImagePath}`);
     } else if (e.affectsConfiguration('vscode-image-import.isGooglePhoto')) {
       // Google フォトから画像を取得するかどうか（false の場合は内部保存画像を利用します）に変更あり
-      isGooglePhoto = config.get<boolean>('isGooglePhoto', false);
+      const isGooglePhoto = config.get<boolean>('isGooglePhoto', false);
       MyLoveCatViewPanel.updateIsGooglePhoto(isGooglePhoto);
       MyLoveCatViewProvider.updateIsGooglePhoto(isGooglePhoto);
       outputCh.appendLine(`[change]isGooglePhoto: ${isGooglePhoto}`);
@@ -194,12 +176,6 @@ function registerConfigChangeHandler(
       }
     }
   }));
-}
-
-// タイマーのコールバック関数
-function updateRandomDisplay() {
-  MyLoveCatViewPanel.randomUpdate();
-  MyLoveCatViewProvider.randomUpdate();
 }
 
 /**

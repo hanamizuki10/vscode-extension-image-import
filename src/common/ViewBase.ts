@@ -10,6 +10,7 @@ export abstract class ViewBase {
   public baseUrls: string[] = [];
   protected readonly _extensionUri: vscode.Uri;
   protected readonly _outputCh: vscode.OutputChannel | undefined;
+  protected _updateInterval: NodeJS.Timeout | undefined; // タイマーを保持する変数を追加
 
   constructor(
     extensionUri: vscode.Uri,
@@ -31,6 +32,48 @@ export abstract class ViewBase {
       webview.html = await getHtmlForWebviewEx(webview, this._extensionUri, this.baseUrls);
     } else {
       webview.html = getHtmlForWebview(webview, this._extensionUri, this.configImagePath);
+    }
+  }
+
+  /**
+   * タイマーを開始するメソッド
+   */
+  protected startUpdateTimer(): void {
+    // すでにタイマーが動いている場合は何もしない
+    if (this._updateInterval) {
+      console.log('タイマーはすでに動作中です');
+      return;
+    }
+    
+    const config = vscode.workspace.getConfiguration('vscode-image-import');
+    const intervalSeconds = config.get<number>('intervalSeconds', 10);
+    console.log(`タイマーを開始します: ${intervalSeconds}秒間隔`);
+    this._updateInterval = setInterval(() => {
+      console.log('タイマーによる更新を実行します');
+      this.randomUpdate();
+    }, intervalSeconds * 1000);
+  }
+  
+  /**
+   * タイマーを停止するメソッド
+   */
+  protected stopUpdateTimer(): void {
+    if (this._updateInterval) {
+      console.log('タイマーを停止します');
+      clearInterval(this._updateInterval);
+      this._updateInterval = undefined;
+    } else {
+      console.log('停止するタイマーがありません');
+    }
+  }
+  
+  /**
+   * 更新間隔を変更するメソッド
+   */
+  public updateInterval(): void {
+    if (this._updateInterval) {
+      this.stopUpdateTimer();
+      this.startUpdateTimer();
     }
   }
 

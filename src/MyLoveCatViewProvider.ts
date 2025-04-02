@@ -8,6 +8,7 @@ import { ViewBase } from './common/ViewBase';
 export class MyLoveCatViewProvider extends ViewBase implements vscode.WebviewViewProvider {
   public static currentProvider: MyLoveCatViewProvider | undefined;
   private _view?: vscode.WebviewView;
+  private _isVisible: boolean = false; // ビューの表示状態を追跡
 
   /**
    * コンストラクタ
@@ -30,15 +31,54 @@ export class MyLoveCatViewProvider extends ViewBase implements vscode.WebviewVie
     context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ): void {
+    console.log('MyLoveCatViewProvider.resolveWebviewView() が呼び出されました');
+    console.log(`isGooglePhoto: ${this.isGooglePhoto}, baseUrls.length: ${this.baseUrls.length}`);
+    
     this._view = webviewView;
     webviewView.webview.options = getWebviewOptions(this._extensionUri, this.configImagePath);
+    
+    // Google Photoモードが有効で、baseUrlsが空の場合は、randomUpdateFromGoogleコマンドを実行
+    if (this.isGooglePhoto) {
+      console.log(`Google Photoモードが有効です。baseUrls.length: ${this.baseUrls.length}`);
+      if (this.baseUrls.length === 0) {
+        console.log('baseUrlsが空なので、randomUpdateFromGoogleコマンドを実行します');
+        vscode.commands.executeCommand('vscode-image-import.randomUpdateFromGoogle');
+      }
+    }
+    
     this.randomUpdate();
+    
+    // ビューが表示されたときにタイマーを開始
+    this._isVisible = true;
+    console.log('タイマーを開始します');
+    this.startUpdateTimer();
+    
+    // ビューの表示状態が変わったときのイベントハンドラを登録
+    webviewView.onDidChangeVisibility(() => {
+      this._isVisible = webviewView.visible;
+      console.log(`ビューの表示状態が変更されました: ${this._isVisible}`);
+      if (this._isVisible) {
+        console.log('ビューが表示されたので、タイマーを開始します');
+        this.startUpdateTimer(); // ビューが表示されたらタイマーを開始
+      } else {
+        console.log('ビューが非表示になったので、タイマーを停止します');
+        this.stopUpdateTimer(); // ビューが非表示になったらタイマーを停止
+      }
+    });
+    
+    // ビューが破棄されたときのイベントハンドラを登録
+    webviewView.onDidDispose(() => {
+      console.log('ビューが破棄されたので、タイマーを停止します');
+      this.stopUpdateTimer();
+    });
   }
 
   /**
    * 表示内容をランダムに更新する
    */
   public randomUpdate(): void {
+    console.log('MyLoveCatViewProvider.randomUpdate() が呼び出されました');
+    console.log(`isGooglePhoto: ${this.isGooglePhoto}, baseUrls.length: ${this.baseUrls.length}`);
     if (this._view) {
       this.updateWebviewContent(this._view.webview);
     }
@@ -85,6 +125,15 @@ export class MyLoveCatViewProvider extends ViewBase implements vscode.WebviewVie
   public static updateMediaItemBaseUrls(baseUrls: string[]): void {
     if (MyLoveCatViewProvider.currentProvider) {
       MyLoveCatViewProvider.currentProvider.updateMediaItemBaseUrls(baseUrls);
+    }
+  }
+  
+  /**
+   * 更新間隔を変更する
+   */
+  public static updateInterval(): void {
+    if (MyLoveCatViewProvider.currentProvider) {
+      MyLoveCatViewProvider.currentProvider.updateInterval();
     }
   }
 }

@@ -19,12 +19,17 @@ export class MyLoveCatViewPanel extends ViewBase {
     isGooglePhoto: boolean = false, 
     outputCh?: vscode.OutputChannel
   ): void {
+    console.log('MyLoveCatViewPanel.createOrShow() が呼び出されました');
+    console.log(`isGooglePhoto: ${isGooglePhoto}, configImagePath: ${configImagePath}`);
+    
     // すでにパネル表示している場合は、フォーカスを当て再表示させる
     if (MyLoveCatViewPanel.currentPanel) {
+      console.log('既存のパネルにフォーカスします');
       MyLoveCatViewPanel.currentPanel._panel.reveal(undefined);
       return;
     }
 
+    console.log('新しいパネルを作成します');
     // パネル作成
     const webviewOptions: vscode.WebviewOptions = getWebviewOptions(extensionUri, configImagePath);
     const panel = vscode.window.createWebviewPanel(
@@ -47,8 +52,25 @@ export class MyLoveCatViewPanel extends ViewBase {
     outputCh?: vscode.OutputChannel,
   ) {
     super(extensionUri, configImagePath, isGooglePhoto, outputCh);
+    console.log('MyLoveCatViewPanel コンストラクタが呼び出されました');
+    console.log(`isGooglePhoto: ${isGooglePhoto}, configImagePath: ${configImagePath}`);
+    
     this._panel = panel;
+    
+    // Google Photoモードが有効で、baseUrlsが空の場合は、randomUpdateFromGoogleコマンドを実行
+    if (isGooglePhoto) {
+      console.log(`Google Photoモードが有効です。baseUrls.length: ${this.baseUrls.length}`);
+      if (this.baseUrls.length === 0) {
+        console.log('baseUrlsが空なので、randomUpdateFromGoogleコマンドを実行します');
+        vscode.commands.executeCommand('vscode-image-import.randomUpdateFromGoogle');
+      }
+    }
+    
     this.randomUpdate();
+    
+    // 定期的な更新のためのタイマーを設定
+    console.log('コンストラクタでタイマーを開始します');
+    this.startUpdateTimer();
     
     // パネルが破棄された時のリソース解放処理を登録
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -58,6 +80,12 @@ export class MyLoveCatViewPanel extends ViewBase {
    * パネルを閉じた時に呼び出される (クリーンアップ処理追加)
    */
   public dispose(): void {
+    console.log('MyLoveCatViewPanel.dispose() が呼び出されました');
+    
+    // タイマーをクリア
+    this.stopUpdateTimer();
+    
+    console.log('currentPanelをundefinedに設定します');
     MyLoveCatViewPanel.currentPanel = undefined;
     this._panel.dispose();
     while (this._disposables.length) {
@@ -72,6 +100,8 @@ export class MyLoveCatViewPanel extends ViewBase {
    * 表示内容をランダムに更新する
    */
   public randomUpdate(): void {
+    console.log('MyLoveCatViewPanel.randomUpdate() が呼び出されました');
+    console.log(`isGooglePhoto: ${this.isGooglePhoto}, baseUrls.length: ${this.baseUrls.length}`);
     if (this._panel.webview) {
       this.updateWebviewContent(this._panel.webview);
     }
@@ -118,6 +148,15 @@ export class MyLoveCatViewPanel extends ViewBase {
   public static updateMediaItemBaseUrls(baseUrls: string[]): void {
     if (MyLoveCatViewPanel.currentPanel) {
       MyLoveCatViewPanel.currentPanel.updateMediaItemBaseUrls(baseUrls);
+    }
+  }
+  
+  /**
+   * 更新間隔を変更する
+   */
+  public static updateInterval(): void {
+    if (MyLoveCatViewPanel.currentPanel) {
+      MyLoveCatViewPanel.currentPanel.updateInterval();
     }
   }
 }
