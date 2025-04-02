@@ -1,76 +1,90 @@
 import * as vscode from 'vscode';
-import { getHtmlForWebview, getHtmlForWebviewEx, getWebviewOptions } from './utils';
+import { getWebviewOptions } from './utils';
+import { ViewBase } from './common/ViewBase';
 
 /**
  * エクスプローラーに表示するためのクラス
  */
-export class MyLoveCatViewProvider implements vscode.WebviewViewProvider {
+export class MyLoveCatViewProvider extends ViewBase implements vscode.WebviewViewProvider {
   public static currentProvider: MyLoveCatViewProvider | undefined;
-  public configImagePath: string | undefined;
-  public isGooglePhoto: boolean = false;
-  public baseUrls: string[] = [];
   private _view?: vscode.WebviewView;
-  private readonly _outputCh: vscode.OutputChannel | undefined;
-  // コンストラクタ(初期パスを設定)
+
+  /**
+   * コンストラクタ
+   */
   constructor(
-    private readonly _extensionUri: vscode.Uri,
+    extensionUri: vscode.Uri,
     configImagePath: string | undefined,
     isGooglePhoto: boolean = false,
-    private readonly outputCh?: vscode.OutputChannel,
+    outputCh?: vscode.OutputChannel,
   ) {
-    this.configImagePath = configImagePath;
-    this.isGooglePhoto = isGooglePhoto;
+    super(extensionUri, configImagePath, isGooglePhoto, outputCh);
     MyLoveCatViewProvider.currentProvider = this;
-    this._outputCh = outputCh;
   }
-  // 最初に表示する際に呼び出される
+
+  /**
+   * 最初に表示する際に呼び出される
+   */
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
-  ) {
+  ): void {
     this._view = webviewView;
     webviewView.webview.options = getWebviewOptions(this._extensionUri, this.configImagePath);
-    this._update();
+    this.randomUpdate();
   }
-  // 表示内容を更新する
-  private async _update() {
+
+  /**
+   * 表示内容をランダムに更新する
+   */
+  public randomUpdate(): void {
     if (this._view) {
-      const webview = this._view.webview;
-      if (this.isGooglePhoto) {
-        webview.html = await getHtmlForWebviewEx(webview, this._extensionUri, this.baseUrls);
-      } else {
-        webview.html = getHtmlForWebview(webview, this._extensionUri, this.configImagePath);
-      }
-    }
-  }
-  // 設定画面から画像フォルダパスを更新された場合に呼び出される
-  public static updateConfigImagePath(configImagePath: string | undefined) {
-    if (MyLoveCatViewProvider.currentProvider) {
-      if (MyLoveCatViewProvider.currentProvider._view) {
-        // webviewのオプションを更新
-        const webviewOptions: vscode.WebviewOptions = getWebviewOptions(MyLoveCatViewProvider.currentProvider._extensionUri, configImagePath);
-        MyLoveCatViewProvider.currentProvider._view.webview.options = webviewOptions;
-      }
-      MyLoveCatViewProvider.currentProvider.configImagePath = configImagePath;
-    }
-  }
-  public static updateIsGooglePhoto(isGooglePhoto: boolean) {
-    if (MyLoveCatViewProvider.currentProvider) {
-      MyLoveCatViewProvider.currentProvider.isGooglePhoto = isGooglePhoto;
+      this.updateWebviewContent(this._view.webview);
     }
   }
 
-  // コマンドから「ランダム表示」を実行された場合に呼び出される
-  public static randomUpdate() {
+  /**
+   * 設定画面から画像フォルダパスを更新された場合に呼び出される
+   */
+  public static updateConfigImagePath(configImagePath: string | undefined): void {
     if (MyLoveCatViewProvider.currentProvider) {
-      MyLoveCatViewProvider.currentProvider._update();
-      return;
+      if (MyLoveCatViewProvider.currentProvider._view) {
+        // webviewのオプションを更新
+        const webviewOptions: vscode.WebviewOptions = getWebviewOptions(
+          MyLoveCatViewProvider.currentProvider._extensionUri, 
+          configImagePath
+        );
+        MyLoveCatViewProvider.currentProvider._view.webview.options = webviewOptions;
+      }
+      MyLoveCatViewProvider.currentProvider.updateConfigImagePath(configImagePath);
     }
   }
-  public static updateMediaItemBaseUrls(baseUrls: string[]) {
+
+  /**
+   * Google Photoモードを更新する
+   */
+  public static updateIsGooglePhoto(isGooglePhoto: boolean): void {
     if (MyLoveCatViewProvider.currentProvider) {
-      MyLoveCatViewProvider.currentProvider.baseUrls = baseUrls;
+      MyLoveCatViewProvider.currentProvider.updateIsGooglePhoto(isGooglePhoto);
+    }
+  }
+
+  /**
+   * コマンドから「ランダム表示」を実行された場合に呼び出される
+   */
+  public static randomUpdate(): void {
+    if (MyLoveCatViewProvider.currentProvider) {
+      MyLoveCatViewProvider.currentProvider.randomUpdate();
+    }
+  }
+
+  /**
+   * メディアアイテムのURLリストを更新する
+   */
+  public static updateMediaItemBaseUrls(baseUrls: string[]): void {
+    if (MyLoveCatViewProvider.currentProvider) {
+      MyLoveCatViewProvider.currentProvider.updateMediaItemBaseUrls(baseUrls);
     }
   }
 }

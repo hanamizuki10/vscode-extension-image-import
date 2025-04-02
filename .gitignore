@@ -3,4 +3,6 @@ dist
 node_modules
 .vscode-test/
 *.vsix
-__memo__
+.DS_Store
+__localmemo__/*
+.tool-versions
