@@ -124,13 +124,16 @@ function registerSecretDataCommand(context: vscode.ExtensionContext, outputCh: v
   // パネルが閉じられたことを検知したら再認証を促す
   panel.onDidDispose(async () => {
     await AuthService.authenticate(outputCh, context);
-    // Google Photos から画像一覧を取得
+    // Google Photos からアルバム一覧を取得
     const albums = await GooglePhotosService.getAlbums(outputCh, context);
     outputCh.appendLine('albums: ' + JSON.stringify(albums));
+    // 取得したGoogle Photosのアルバム一覧を画面上に表示して選択させる
     const albumTitle = await createSelectAlbumPanel(context, albums);
     outputCh.appendLine('albumTitle: ' + JSON.stringify(albumTitle));
     // ユーザー選択結果を保存
     config.update('googlePhotoAlbumTitle', albumTitle, true);
+    // Google Photosから画像を一覧取得して、ランダムに画像を表示させる
+    listAlbumsWithRetry(outputCh, context);
   }, null, context.subscriptions);
 }
 
