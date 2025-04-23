@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getHtmlForWebview, getHtmlForWebviewEx, getWebviewOptions } from '../utils';
+import { generateWebviewHtmlForLocalImage, generateWebviewHtmlForGooglePhoto } from '../utils';
 
 /**
  * MyLoveCatViewPanelとMyLoveCatViewProviderの共通機能を提供する基底クラス
@@ -29,9 +29,9 @@ export abstract class ViewBase {
    */
   protected async updateWebviewContent(webview: vscode.Webview): Promise<void> {
     if (this.isGooglePhoto) {
-      webview.html = await getHtmlForWebviewEx(webview, this._extensionUri, this.baseUrls);
+      webview.html = await generateWebviewHtmlForGooglePhoto(webview, this._extensionUri, this.baseUrls);
     } else {
-      webview.html = getHtmlForWebview(webview, this._extensionUri, this.configImagePath);
+      webview.html = generateWebviewHtmlForLocalImage(webview, this._extensionUri, this.configImagePath);
     }
   }
 

@@ -45,7 +45,7 @@ function getNonce() {
  * @param extensionUri 
  * @returns 
  */
-export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.Uri, configImagePath: string | undefined): string {
+export function generateWebviewHtmlForLocalImage(webview: vscode.Webview, extensionUri: vscode.Uri, configImagePath: string | undefined): string {
   // ランダムに表示する画像を選択
   let imagePath;
   let filename = '';
@@ -106,7 +106,7 @@ export function getHtmlForWebview(webview: vscode.Webview, extensionUri: vscode.
 </html>`;
 }
 
-export async function getHtmlForWebviewEx(webview: vscode.Webview, extensionUri: vscode.Uri, baseUrls: string[]): Promise<string> {
+export async function generateWebviewHtmlForGooglePhoto(webview: vscode.Webview, extensionUri: vscode.Uri, baseUrls: string[]): Promise<string> {
 // memo :
 // mediaItems.baseUrlの値を活用（少なくても、ログインしなくても表示可能）productUrlはログインしている場合にのみ利用可能
 // baseUrlはしばらくすると使えなくなる動きをしている。直前にとってきた値のみ使えるようになっている
@@ -182,4 +182,3 @@ async function isURLAlive(url: string): Promise<boolean> {
       return false; // ネットワークエラーやその他の例外でリクエストが失敗した場合はfalseを返します
   }
 }
-
