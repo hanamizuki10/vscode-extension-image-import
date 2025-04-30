@@ -109,7 +109,7 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "googleapis": "^140.0.1",
+    "googleapis": "^148.0.0",
     "node-fetch": "^3.3.2",
     "open": "^10.1.0"
   }
